@@ -8,7 +8,7 @@ from os import environ as env
 
 TOKEN = env.get("BOT_TOKEN")
 
-client = commands.Bot(command_prefix='=', case_insensitive=True, intents = discord.Intents.all())
+client = commands.Bot(command_prefix='.', case_insensitive=True, intents = discord.Intents.all())
 
 cogs = [music]
 

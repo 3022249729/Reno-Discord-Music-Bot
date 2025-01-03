@@ -56,9 +56,9 @@ class Player:
         if not self.loop_song:
             self.now_playing = None 
 
-        if self.queue and not self.loop_song:
+        if (self.queue and not self.loop_song) or (self.loop_song and not self.now_playing and self.queue):
             self.now_playing = self.queue.pop(0)
-        
+
         if self.now_playing:
             await self.play(self.now_playing)
 

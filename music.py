@@ -29,9 +29,17 @@ class Music(commands.Cog):
             del self.players[guild_id]
 
     @commands.command(name='Play', aliases=['pl', 'p'], description="Play audio from the provided URL/keyword.")
-    async def _play(self,ctx, *, url=None):
+    async def _play(self,ctx, *, url:str=None):
         if ctx.author.voice is None:
             await ctx.send(embed=discord.Embed(description=f"Please join a voice channel to use this command.", color=c2))        
+            return
+        
+        if not url:
+            if player.is_paused:
+                player.resume()
+                await ctx.send(embed=discord.Embed(description=f"▶️ Resuming music...", color=c1))
+            else:
+                await ctx.send(embed=discord.Embed(description=f"Please enter an URL/keyword.", color=c2))        
             return
         
         if ctx.voice_client is None and ctx.author.voice is not None:
@@ -60,7 +68,7 @@ class Music(commands.Cog):
 
 
     @commands.command(name='Queue', aliases=['q'], description="Shows the list of queued songs.")
-    async def _queue(self, ctx, page=1):
+    async def _queue(self, ctx, page:int=1):
         if not await self.command_availability_check(ctx):
             return
 
@@ -114,6 +122,10 @@ class Music(commands.Cog):
 
         await ctx.send(embed=embed)
 
+    @_queue.error
+    async def _queue_error(self, ctx, error):
+        if isinstance(error, commands.BadArgument):
+            await ctx.send(embed=discord.Embed(description="Invalid page number, please provide a positive integer.",color=c2))
               
     @commands.command(name='Leave', aliases=['disconnect','dc'], description="Disconnect from the current voice channel.")
     async def _leave(self, ctx):
@@ -197,17 +209,8 @@ class Music(commands.Cog):
             if index > len(queue) or index == 0 or index < -1:
                 await ctx.send(embed=discord.Embed(description=f"Invalid index.", color=c2))
                 return
-            
-            # if index == 1:
-            #     removed_song = player.now_playing
-            #     await ctx.send(embed=discord.Embed(description=f"**Removed:** [{removed_song.title}]({removed_song.videolink})", color=c1))
-            #     await player.skip()
-            #     return
+
             if index == -1:
-                # if len(queue) == 1:
-                #     removed_song = player.now_playing
-                #     await player.skip()
-                # else:
                 removed_song = queue.pop(-1)
                 player.update_queue(queue)
             else:
@@ -218,6 +221,12 @@ class Music(commands.Cog):
             
         else:
             await ctx.send(embed=discord.Embed(description=f"I'm currently not in a voice channel, use the `play` command to get started.", color=c2))
+
+    @_queue.error
+    async def _remove_error(self, ctx, error):
+        if isinstance(error, commands.BadArgument):
+            await ctx.send(embed=discord.Embed(description="Invalid index.",color=c2))
+
 
     @commands.command(name='Jump', aliases = ['j'], description="Jump to the song at the specified index. Use -1 to remove the last song in the queue.")
     async def _jump(self,ctx,index:int):
@@ -245,6 +254,12 @@ class Music(commands.Cog):
 
         else:
             await ctx.send(embed=discord.Embed(description=f"I'm currently not in a voice channel, use the `play` command to get started.", color=c2))
+
+    @_jump.error
+    async def _jump_error(self, ctx, error):
+        if isinstance(error, commands.BadArgument):
+            await ctx.send(embed=discord.Embed(description="Invalid index.",color=c2))
+
 
     @commands.command(name='LoopSong', aliases=['ls'], description="Enable/disable loop song.")
     async def _loopsong(self,ctx):

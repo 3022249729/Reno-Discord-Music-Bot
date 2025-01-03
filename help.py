@@ -8,7 +8,7 @@ class Help(commands.HelpCommand):
     async def send_bot_help(self, mapping):
         embed = discord.Embed(title="Help", color=0x47A7FF)
         prefix = self.context.clean_prefix
-        embed.description = f"Do `{prefix}help <command>` for more help of the command.\nFor example: `{prefix}help play`\n\nCapitalizations are ignored.\n"
+        embed.description = f"Use `{prefix}help <command>` for more help of the command.\nFor example: `{prefix}help play`\n\nCapitalizations are ignored.\n"
         for cog, commands in mapping.items():
             command_signatures = []
 

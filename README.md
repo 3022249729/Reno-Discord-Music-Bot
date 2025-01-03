@@ -97,5 +97,5 @@ Below is the list of all the commands for the bot:
 | .nowplaying           | `.np`               | Show the information about the song currently playing.                                            |
 | .loopsong             | `.ls`               | Enable/disable loop song.                                                                         |
 | .loopqueue            | `.lq`               | Enable/disable loop queue.                                                                        |
-| .leave                | `.disconnect`, `dc` | Disconnect from the current voice channel.                                                        |
+| .leave                |  `.dc`              | Disconnect from the current voice channel.                                                        |
 | .ping                 |                     | Shows the latency of the bot.                                                                     |

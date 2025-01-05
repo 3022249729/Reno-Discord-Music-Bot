@@ -23,8 +23,8 @@ async def on_ready():
     discord.opus.load_opus(path)
 
 async def main():
-    for i in range(len(cogs)):
-        await cogs[i].setup(client)
+    for cog in cogs:
+        await cog.setup(client)
 
 
 asyncio.run(main())

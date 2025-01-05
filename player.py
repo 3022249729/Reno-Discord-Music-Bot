@@ -1,8 +1,7 @@
 import discord
-from discord.ext import commands
 import asyncio
-import song as s
 from os import environ as env
+import song as s
 
 DISCONNECT_TIMEOUT = int(env.get("AUTO_DISCONNECT_TIMEOUT"))
 

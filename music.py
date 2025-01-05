@@ -1,9 +1,13 @@
 import discord
 from discord.ext import commands
+import requests
+import re
+from bs4 import BeautifulSoup
+from os import environ as env
 import song as s
 import player as p
-from datetime import datetime
 
+GENIUS_ACCESS_TOKEN = env.get("GENIUS_ACCESS_TOKEN")
 
 c1 = 0x47A7FF #positive
 c2 = 0xFF3333 #negative
@@ -27,6 +31,39 @@ class Music(commands.Cog):
     def remove_player(self, guild_id):
         if guild_id in self.players:
             del self.players[guild_id]
+
+    async def command_availability_check(self,ctx):
+        if ctx.author.voice is None:
+            await ctx.send(embed=discord.Embed(description=f"Please join a voice channel to use this command.", color=c2))
+            return False
+
+        if ctx.voice_client is None:
+            await ctx.send(embed=discord.Embed(description=f"I'm currently not in a voice channel, use the `play` command to get started.", color=c2))
+            return False
+
+        if ctx.voice_client.channel is not ctx.author.voice.channel:
+            await ctx.send(embed=discord.Embed(description=f"Please join the voice channel I'm currently in to use this command.", color=c2))
+            return False
+        
+        return True
+    
+    def search_song_genius(self, song_title, access_token):
+        search_url = "https://api.genius.com/search"
+        headers = {
+            "Authorization": f"Bearer {access_token}"
+        }
+        params = {
+            "q": song_title
+        }
+        
+        response = requests.get(search_url, headers=headers, params=params)
+        json_data = response.json()
+        
+        if json_data['response']['hits']:
+            song_data = json_data['response']['hits'][0]['result']
+            return song_data
+        else:
+            return None
 
     @commands.command(name='Play', aliases=['pl', 'p'], description="Play audio from the provided URL/keyword.")
     async def _play(self,ctx, *, url:str=None):
@@ -74,7 +111,7 @@ class Music(commands.Cog):
 
         player = self.players.get(ctx.guild.id)
         if not player:
-            await ctx.send(embed=discord.Embed(description=f"I'm currently not in a voice channel, use the `play` command to get started.",color=c2))
+            await ctx.send(embed=discord.Embed(description=f"I'm not in a voice channel, use the `play` command to get started.", color=c2))
             return
 
         if not player.now_playing:
@@ -133,12 +170,13 @@ class Music(commands.Cog):
             return
 
         player = self.players.get(ctx.guild.id)
-        if player:
-            await player.disconnect()
-            del self.players[ctx.guild.id]
-        else:
-            await ctx.send(embed=discord.Embed(description=f"I'm currently not in a voice channel, use the `play` command to get started.", color=c2))
-
+        if not player:
+            await ctx.send(embed=discord.Embed(description=f"I'm not in a voice channel.", color=c2))
+            return
+        
+        await player.disconnect()
+        del self.players[ctx.guild.id]
+        
 
     @commands.command(name='Pause', description="Pause the music.")
     async def _pause(self, ctx):
@@ -146,18 +184,19 @@ class Music(commands.Cog):
             return
     
         player = self.players.get(ctx.guild.id)
-        if player:
-            if not player.now_playing:
-                await ctx.send(embed=discord.Embed(description=f"I cannot pause when nothing is playing.", color=c2))
-                return
+        if not player:
+            await ctx.send(embed=discord.Embed(description=f"I'm not in a voice channel, use the `play` command to get started.", color=c2))
+            return
+        
+        if not player.now_playing:
+            await ctx.send(embed=discord.Embed(description=f"I cannot pause when nothing is playing.", color=c2))
+            return
+        
+        if not player.is_paused:
+            player.pause()
             
-            if not player.is_paused:
-                player.pause()
-                
-            await ctx.send(embed=discord.Embed(description=f"⏸ Music paused...", color=c1))
-        else:
-            await ctx.send(embed=discord.Embed(description=f"I'm currently not in a voice channel, use the `play` command to get started.", color=c2))
-
+        await ctx.send(embed=discord.Embed(description=f"⏸ Music paused...", color=c1))
+       
 
     @commands.command(name='Resume', description="Resume the music.")
     async def _resume(self, ctx):
@@ -165,18 +204,19 @@ class Music(commands.Cog):
             return
         
         player = self.players.get(ctx.guild.id)
-        if player:
-            if not player.now_playing:
-                await ctx.send(embed=discord.Embed(description=f"I cannot resume when nothing is playing.", color=c2))
-                return
-            
-            if player.is_paused:
-                player.resume()
+        if not player:
+            await ctx.send(embed=discord.Embed(description=f"I'm not in a voice channel, use the `play` command to get started.", color=c2))
+            return
+        
+        if not player.now_playing:
+            await ctx.send(embed=discord.Embed(description=f"I cannot resume when nothing is playing.", color=c2))
+            return
+        
+        if player.is_paused:
+            player.resume()
 
-            await ctx.send(embed=discord.Embed(description=f"▶️ Resuming music...", color=c1))
-        else:
-            await ctx.send(embed=discord.Embed(description=f"I'm currently not in a voice channel, use the `play` command to get started.", color=c2))
-
+        await ctx.send(embed=discord.Embed(description=f"▶️ Resuming music...", color=c1))
+    
 
     @commands.command(name='Skip', aliases=['next', 's'], description="Skip the current song.")
     async def _skip(self, ctx):
@@ -184,44 +224,46 @@ class Music(commands.Cog):
             return
         
         player = self.players.get(ctx.guild.id)
-        if player:
-            if not player.now_playing:
-                await ctx.send(embed=discord.Embed(description=f"I cannot skip when nothing is playing.", color=c2))
-                return
-            
-            await ctx.send(embed=discord.Embed(description=f"**Skipped:** [{player.now_playing.title}]({player.now_playing.videolink})", color=c1))
+        if not player:
+            await ctx.send(embed=discord.Embed(description=f"I'm not in a voice channel, use the `play` command to get started.", color=c2))
+            return
+        
+        if not player.now_playing:
+            await ctx.send(embed=discord.Embed(description=f"I cannot skip when nothing is playing.", color=c2))
+            return
+        
+        await ctx.send(embed=discord.Embed(description=f"**Skipped:** [{player.now_playing.title}]({player.now_playing.videolink})", color=c1))
 
-            await player.skip()
-            if player.is_paused:
-                player.resume()
+        await player.skip()
+        if player.is_paused:
+            player.resume()
 
-        else:
-            await ctx.send(embed=discord.Embed(description=f"I'm currently not in a voice channel, use the `play` command to get started.", color=c2))
-
-    @commands.command(name='Remove', aliases=['rm','delete','dl'], description="Remove a song from the queue at the specified index. Use -1 to remove the last song in the queue.")
+       
+    @commands.command(name='Remove', aliases=['rm', 'dl'], description="Remove a song from the queue at the specified index. Use -1 to remove the last song in the queue.")
     async def _remove(self,ctx,index:int):
         if not await self.command_availability_check(ctx):
             return
         
         player = self.players.get(ctx.guild.id)
-        if player:
-            queue = player.queue
-            if index > len(queue) or index == 0 or index < -1:
-                await ctx.send(embed=discord.Embed(description=f"Invalid index.", color=c2))
-                return
+        if not player:
+            await ctx.send(embed=discord.Embed(description=f"I'm not in a voice channel, use the `play` command to get started.", color=c2))
+            return
+        
+        queue = player.queue
+        if index > len(queue) or index == 0 or index < -1:
+            await ctx.send(embed=discord.Embed(description=f"Invalid index.", color=c2))
+            return
 
-            if index == -1:
-                removed_song = queue.pop(-1)
-                player.update_queue(queue)
-            else:
-                removed_song = queue.pop(index - 1)
-                player.update_queue(queue)
-
-            await ctx.send(embed=discord.Embed(description=f"**Removed:** [{removed_song.title}]({removed_song.videolink})", color=c1))
-            
+        if index == -1:
+            removed_song = queue.pop(-1)
+            player.update_queue(queue)
         else:
-            await ctx.send(embed=discord.Embed(description=f"I'm currently not in a voice channel, use the `play` command to get started.", color=c2))
+            removed_song = queue.pop(index - 1)
+            player.update_queue(queue)
 
+        await ctx.send(embed=discord.Embed(description=f"**Removed:** [{removed_song.title}]({removed_song.videolink})", color=c1))
+            
+        
     @_queue.error
     async def _remove_error(self, ctx, error):
         if isinstance(error, commands.BadArgument):
@@ -234,26 +276,26 @@ class Music(commands.Cog):
             return
 
         player = self.players.get(ctx.guild.id)
-        if player:
-            queue = player.queue()
-            if index > len(queue) or index <= 0:
-                await ctx.send(embed=discord.Embed(description=f"Invalid index.", color=c2))
-                return
-            
-            if index == -1:
-                target_song = queue.pop(-1)
-            else:
-                target_song = queue.pop(index - 1)
-            queue.insert(0,target_song)
-            player.update_queue(queue)
-
-            if player.loop_song:
-                player.now_playing = queue[0]
-
-            await player.skip()
-
+        if not player:
+            await ctx.send(embed=discord.Embed(description=f"I'm not in a voice channel, use the `play` command to get started.", color=c2))
+            return
+        
+        queue = player.queue()
+        if index > len(queue) or index <= 0:
+            await ctx.send(embed=discord.Embed(description=f"Invalid index.", color=c2))
+            return
+        
+        if index == -1:
+            target_song = queue.pop(-1)
         else:
-            await ctx.send(embed=discord.Embed(description=f"I'm currently not in a voice channel, use the `play` command to get started.", color=c2))
+            target_song = queue.pop(index - 1)
+        queue.insert(0,target_song)
+        player.update_queue(queue)
+
+        if player.loop_song:
+            player.now_playing = queue[0]
+
+        await player.skip()
 
     @_jump.error
     async def _jump_error(self, ctx, error):
@@ -267,19 +309,20 @@ class Music(commands.Cog):
             return
         
         player = self.players.get(ctx.guild.id)
-        if player:
-            if player.loop_song:
-                player.loop_song = False
-                await ctx.send(embed=discord.Embed(description=f"Loop Song: **DISABLED**", color=c1))
-            else:
-                player.loop_song = True
-                await ctx.send(embed=discord.Embed(description=f"Loop Song: **ENABLED**", color=c1))
-
-            if player.loop_queue:
-                player.loop_queue = False
+        if not player:
+            await ctx.send(embed=discord.Embed(description=f"I'm not in a voice channel, use the `play` command to get started.", color=c2))
+            return
+        
+        if player.loop_song:
+            player.loop_song = False
+            await ctx.send(embed=discord.Embed(description=f"Loop Song: **DISABLED**", color=c1))
         else:
-            await ctx.send(embed=discord.Embed(description=f"I'm currently not in a voice channel, use the `play` command to get started.", color=c2))
+            player.loop_song = True
+            await ctx.send(embed=discord.Embed(description=f"Loop Song: **ENABLED**", color=c1))
 
+        if player.loop_queue:
+            player.loop_queue = False
+        
 
     @commands.command(name='LoopQueue', aliases=['lq'], description="Enable/disable loop queue")
     async def _loopqueue(self,ctx):
@@ -287,68 +330,117 @@ class Music(commands.Cog):
             return
         
         player = self.players.get(ctx.guild.id)
-        if player:
-            if player.loop_queue:
-                player.loop_queue = False
-                await ctx.send(embed=discord.Embed(description=f"Loop Queue: **DISABLED**", color=c1))
-            else:
-                player.loop_queue = True
-                await ctx.send(embed=discord.Embed(description=f"Loop Queue: **ENABLED**", color=c1))
-
-            if player.loop_song:
-                player.loop_song = False
+        if not player:
+            await ctx.send(embed=discord.Embed(description=f"I'm not in a voice channel, use the `play` command to get started.", color=c2))
+            return
+        
+        if player.loop_queue:
+            player.loop_queue = False
+            await ctx.send(embed=discord.Embed(description=f"Loop Queue: **DISABLED**", color=c1))
         else:
-            await ctx.send(embed=discord.Embed(description=f"I'm currently not in a voice channel, use the `play` command to get started.", color=c2))
+            player.loop_queue = True
+            await ctx.send(embed=discord.Embed(description=f"Loop Queue: **ENABLED**", color=c1))
 
+        if player.loop_song:
+            player.loop_song = False
+        
 
-    @commands.command(name='NowPlaying',aliases=['np'], description="Show the information about the song currently playing.")
+    @commands.command(name='NowPlaying', aliases=['np'], description="Show the information about the song currently playing.")
     async def _songInfo(self,ctx):
         if not await self.command_availability_check(ctx):
             return
         
         player = self.players.get(ctx.guild.id)
-        if player:
-            if not player.now_playing:
-                await ctx.send(embed=discord.Embed(description=f"Nothing is currently playing.", color=c2))
-                return
-            
-            song = player.now_playing
+        if not player:
+            await ctx.send(embed=discord.Embed(description=f"I'm not in a voice channel, use the `play` command to get started.", color=c2))
+            return
         
-            embed=discord.Embed(title=song.title,url=song.videolink, color=c1)
-            try:
-                embed.set_image(url = song.thumbnail)
-                embed.add_field(name = 'Publisher:', value=song.uploader, inline=True)
-                embed.add_field(name = 'Publish Date:', value=song.date, inline=True)
-                embed.add_field(name = 'Duration:', value=song.duration,inline=True)
-                embed.add_field(name = 'Views:', value=song.views,inline=True)
-                embed.add_field(name = 'Likes:', value=song.likes,inline=True)
-                embed.add_field(name = 'Dislikes:', value=song.dislikes,inline=True)
-            except:
-                pass
-            await ctx.send(embed=embed)
+        if not player.now_playing:
+            await ctx.send(embed=discord.Embed(description=f"Nothing is currently playing, please add a song using play before using this command.", color=c2))
+            return
+        
+        song = player.now_playing
+    
+        embed=discord.Embed(title=song.title,url=song.videolink, color=c1)
+        try:
+            embed.set_image(url = song.thumbnail)
+            embed.add_field(name = 'Publisher:', value=song.uploader, inline=True)
+            embed.add_field(name = 'Publish Date:', value=song.date, inline=True)
+            embed.add_field(name = 'Duration:', value=song.duration,inline=True)
+            embed.add_field(name = 'Views:', value=song.views,inline=True)
+            embed.add_field(name = 'Likes:', value=song.likes,inline=True)
+            embed.add_field(name = 'Dislikes:', value=song.dislikes,inline=True)
+        except:
+            pass
+        await ctx.send(embed=embed)
 
-        else:
-            await ctx.send(embed=discord.Embed(description=f"I'm currently not in a voice channel, use the `play` command to get started.", color=c2))
+            
         
+    @commands.command(name='Lyrics', description="Shows lyrics of the currently playing song.")
+    async def _lyrics(self,ctx):
+        if not await self.command_availability_check(ctx):
+            return
+        
+        player = self.players.get(ctx.guild.id)
+        if not player:
+            await ctx.send(embed=discord.Embed(description=f"I'm not in a voice channel, use the `play` command to get started.", color=c2))
+            return
+        
+        if not player.now_playing:
+            await ctx.send(embed=discord.Embed(description=f"Nothing is currently playing, please add a song using `play` before using this command.", color=c2))
+            return
+        
+        song_data = self.search_song_genius(player.now_playing.keyword, GENIUS_ACCESS_TOKEN)
+
+        if not song_data:
+            await ctx.send(embed=discord.Embed(description=f"No lyrics found.", color=c2))
+            return
+        
+        try:
+            song_url = f"https://genius.com{song_data['path']}"
+            page = requests.get(song_url)
+            html = BeautifulSoup(page.text, 'html.parser')
+        except:
+            await ctx.send(embed=discord.Embed(description=f"An error occurred while fetching the lyrics, please try again.", color=c2))
+            return
+        
+        lyrics_divs = html.find_all('div', {'data-lyrics-container': 'true'})
+
+        lyrics = ""
+
+        for div in lyrics_divs:
+            if div is None:
+                continue
+            
+            div_str = str(div)
+            div_str = div_str.replace("<br/>", "\n").replace("<br>", "\n")
+
+            soup = BeautifulSoup(div_str, 'html.parser')
+
+            text = soup.get_text()
+            
+            if re.match(r'\[.*\]', text):
+                lyrics += '\n' + text
+            else:
+                if '<i>' in div_str or '<b>' in div_str:
+                    lyrics += text
+                else:
+                    lyrics += '\n' + text
+
+        embed=discord.Embed(color=c1)
+        try:
+            embed.title = song_data['full_title']
+            embed.set_thumbnail(url=song_data['song_art_image_url'])
+            embed.description = lyrics.strip()
+        except:
+            pass
+
+        await ctx.send(embed=embed)
+
     @commands.command(name='Ping', description="Shows the latency of the bot.")
     async def _ping(self,ctx):
         await ctx.send(embed=discord.Embed(description=f'__{int(self.client.latency*1000)}__ ms', color=c1))
 
-
-    async def command_availability_check(self,ctx):
-        if ctx.author.voice is None:
-            await ctx.send(embed=discord.Embed(description=f"Please join a voice channel to use this command.", color=c2))
-            return False
-
-        if ctx.voice_client is None:
-            await ctx.send(embed=discord.Embed(description=f"I'm currently not in a voice channel, use the `play` command to get started.", color=c2))
-            return False
-
-        if ctx.voice_client.channel is not ctx.author.voice.channel:
-            await ctx.send(embed=discord.Embed(description=f"Please join the voice channel I'm currently in to use this command.", color=c2))
-            return False
-        
-        return True
 
 
 

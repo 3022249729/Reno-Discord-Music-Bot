@@ -95,6 +95,7 @@ Below is the list of all the commands for the bot:
 | .remove &lt;index&gt; | `.rm` `.dl`         | Remove a song from the queue at the specified index. Use -1 to remove the last song in the queue. |
 | .jump &lt;index&gt;   | `.j`                | Jump to the song at the specified index. Use -1 to jump to the last song in the queue.            |
 | .nowplaying           | `.np`               | Show the information about the song currently playing.                                            |
+| .lyrics               |                     | Shows the lyrics of the song currently playing.                                                   |
 | .loopsong             | `.ls`               | Enable/disable loop song.                                                                         |
 | .loopqueue            | `.lq`               | Enable/disable loop queue.                                                                        |
 | .leave                |  `.dc`              | Disconnect from the current voice channel.                                                        |

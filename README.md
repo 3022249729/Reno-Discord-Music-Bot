@@ -91,12 +91,12 @@ Below is the list of all the commands for the bot:
 | .skip                 | `.s` `.next`        | Skip the current song.                                                                            |
 | .pause                |                     | Pause the music.                                                                                  |
 | .resume               |                     | Resume the music.                                                                                 |
-| .queue [page]         | `.q`                | Shows the list of queued songs.                                                                   |
+| .queue [page]         | `.q`                | Show the list of queued songs.                                                                    |
 | .remove &lt;index&gt; | `.rm` `.dl`         | Remove a song from the queue at the specified index. Use -1 to remove the last song in the queue. |
 | .jump &lt;index&gt;   | `.j`                | Jump to the song at the specified index. Use -1 to jump to the last song in the queue.            |
 | .nowplaying           | `.np`               | Show the information about the song currently playing.                                            |
-| .lyrics               |                     | Shows the lyrics of the song currently playing.                                                   |
+| .lyrics               |                     | Show the lyrics of the song currently playing.                                                    |
 | .loopsong             | `.ls`               | Enable/disable loop song.                                                                         |
 | .loopqueue            | `.lq`               | Enable/disable loop queue.                                                                        |
 | .leave                |  `.dc`              | Disconnect from the current voice channel.                                                        |
-| .ping                 |                     | Shows the latency of the bot.                                                                     |
+| .ping                 |                     | Show the latency of the bot.                                                                      |

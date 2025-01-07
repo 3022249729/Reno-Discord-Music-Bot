@@ -1,5 +1,6 @@
 import discord
 import asyncio
+import random
 from os import environ as env
 import song as s
 
@@ -152,3 +153,9 @@ class Player:
         start = (page - 1) * 10
         end = min(start + 10, len(self.queue))
         return self.queue[start:end], total_pages
+    
+    def shuffle_queue(self):
+        if not self.queue:
+            raise ValueError("Empty queue.")
+        
+        random.shuffle(self.queue)

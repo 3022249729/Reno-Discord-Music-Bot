@@ -64,6 +64,7 @@ class Music(commands.Cog):
             return song_data
         else:
             return None
+        
 
     @commands.command(name='Play', aliases=['pl', 'p'], description="Play audio from the provided URL/keyword.")
     async def _play(self,ctx, *, url:str=None):
@@ -142,13 +143,13 @@ class Music(commands.Cog):
         except ValueError:
             await ctx.send(embed=discord.Embed(description="Invalid page.", color=c2))
             return
-
+              
         queue_list = ""
 
         for i in range(len(songs)):
             queue_list += f'\n{i+1})  {songs[i].title}        [{songs[i].duration}]({songs[i].videolink})'
 
-        embed.add_field(name='Queue:', value=queue_list, inline=False)
+        embed.add_field(name='**Queue**:', value=queue_list, inline=False)
 
         footer = f'Page {page}/{total_pages}'
         if player.loop_song:
@@ -164,6 +165,24 @@ class Music(commands.Cog):
         if isinstance(error, commands.BadArgument):
             await ctx.send(embed=discord.Embed(description="Invalid page number, please provide a positive integer.",color=c2))
               
+
+    @commands.command(name='Shuffle', description="Shuffle the queue.")
+    async def _shuffle(self, ctx):
+        if not await self.command_availability_check(ctx):
+            return
+
+        player = self.players.get(ctx.guild.id)
+        if not player:
+            await ctx.send(embed=discord.Embed(description=f"I'm not in a voice channel.", color=c2))
+            return
+        
+        try:
+            player.shuffle_queue()
+            await self._queue(ctx, page=1)
+        except ValueError:
+            await ctx.send(embed=discord.Embed(description=f"Cannot shuffle an empty queue.", color=c2))
+
+
 
     @commands.command(name='Leave', aliases=['disconnect','dc'], description="Disconnect from the current voice channel.")
     async def _leave(self, ctx):

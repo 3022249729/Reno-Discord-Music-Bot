@@ -2,16 +2,13 @@ import yt_dlp
 import re
 
 ytdlopts = {
-    'format': 'bestaudio/best',
+    'format': 'bestaudio[ext=opus]/bestaudio',
     'noplaylist': True,
     'logtostderr': False,
     'no_warnings': False, 
-    'source_address': '0.0.0.0'
-    # 'default_search': 'auto',
-    # 'quiet': True, 
-    # 'nocheckcertificate': True,
-    # 'ignoreerrors': False,
-    # 'restrictfilenames': True,
+    'source_address': '0.0.0.0',
+    'skip_download': True,
+    'quiet': True, 
 }
 
 

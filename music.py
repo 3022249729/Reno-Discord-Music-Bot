@@ -76,16 +76,15 @@ class Music(commands.Cog):
                 player.resume()
                 await ctx.send(embed=discord.Embed(description=f"▶️ Resuming music...", color=c1))
             else:
-                await ctx.send(embed=discord.Embed(description=f"Please enter an URL/keyword.", color=c2))        
+                await ctx.send(embed=discord.Embed(description=f"Please provide an URL or keyword.", color=c2))        
             return
         
-        if ctx.voice_client is None and ctx.author.voice is not None:
+        if ctx.voice_client is None:
             voice_channel = ctx.author.voice.channel
             await voice_channel.connect()
             ctx.voice_client.stop()
         #Join a voice channel
-
-        if ctx.voice_client.channel is not ctx.author.voice.channel:
+        elif ctx.voice_client.channel is not ctx.author.voice.channel:
             await ctx.send(embed=discord.Embed(description=f"I'm already in a voice channel.", color=c2))
             return
         
@@ -117,12 +116,8 @@ class Music(commands.Cog):
         if not player.now_playing:
             await ctx.send(embed=discord.Embed(description=f"Nothing is currently playing and the queue is empty.",color=c2))
             return
-
+        
         queue = player.queue
-        total_page = (len(queue) + 10 - 1) // 10
-        if page <= 0 or page > total_page and len(queue) > 0:
-            await ctx.send(embed=discord.Embed(description="Invalid page.",color=c2))
-            return
 
         embed = discord.Embed(color=c1, title='**Now Playing:**')
         embed.description = f'🎵   {player.now_playing.title}        [{player.now_playing.duration}]({player.now_playing.videolink})\n'
@@ -142,15 +137,20 @@ class Music(commands.Cog):
             await ctx.send(embed=embed)
             return
         
+        try:
+            songs, total_pages = player.get_queue_page(page)
+        except ValueError:
+            await ctx.send(embed=discord.Embed(description="Invalid page.", color=c2))
+            return
+
         queue_list = ""
-        start = (page - 1) * 10
-        end = min(start + 10, len(queue))
-        for i in range(start, end):
-            queue_list += f'\n{i+1})  {queue[i].title}        [{queue[i].duration}]({queue[i].videolink})'
+
+        for i in range(len(songs)):
+            queue_list += f'\n{i+1})  {songs[i].title}        [{songs[i].duration}]({songs[i].videolink})'
 
         embed.add_field(name='Queue:', value=queue_list, inline=False)
 
-        footer = f'Page {page}/{total_page}'
+        footer = f'Page {page}/{total_pages}'
         if player.loop_song:
             footer += '  ●  Loop Song: ON'
         if player.loop_queue:
@@ -164,6 +164,7 @@ class Music(commands.Cog):
         if isinstance(error, commands.BadArgument):
             await ctx.send(embed=discord.Embed(description="Invalid page number, please provide a positive integer.",color=c2))
               
+
     @commands.command(name='Leave', aliases=['disconnect','dc'], description="Disconnect from the current voice channel.")
     async def _leave(self, ctx):
         if not await self.command_availability_check(ctx):
@@ -232,9 +233,9 @@ class Music(commands.Cog):
             await ctx.send(embed=discord.Embed(description=f"I cannot skip when nothing is playing.", color=c2))
             return
         
+        player.skip()
         await ctx.send(embed=discord.Embed(description=f"**Skipped:** [{player.now_playing.title}]({player.now_playing.videolink})", color=c1))
-
-        await player.skip()
+        
         if player.is_paused:
             player.resume()
 
@@ -249,17 +250,11 @@ class Music(commands.Cog):
             await ctx.send(embed=discord.Embed(description=f"I'm not in a voice channel, use the `play` command to get started.", color=c2))
             return
         
-        queue = player.queue
-        if index > len(queue) or index == 0 or index < -1:
+        try:
+            removed_song = player.remove(index)
+        except ValueError:
             await ctx.send(embed=discord.Embed(description=f"Invalid index.", color=c2))
             return
-
-        if index == -1:
-            removed_song = queue.pop(-1)
-            player.update_queue(queue)
-        else:
-            removed_song = queue.pop(index - 1)
-            player.update_queue(queue)
 
         await ctx.send(embed=discord.Embed(description=f"**Removed:** [{removed_song.title}]({removed_song.videolink})", color=c1))
             
@@ -280,22 +275,13 @@ class Music(commands.Cog):
             await ctx.send(embed=discord.Embed(description=f"I'm not in a voice channel, use the `play` command to get started.", color=c2))
             return
         
-        queue = player.queue()
-        if index > len(queue) or index <= 0:
+        try:
+            player.jump(index)
+            await player.skip()
+        except ValueError:
             await ctx.send(embed=discord.Embed(description=f"Invalid index.", color=c2))
             return
-        
-        if index == -1:
-            target_song = queue.pop(-1)
-        else:
-            target_song = queue.pop(index - 1)
-        queue.insert(0,target_song)
-        player.update_queue(queue)
 
-        if player.loop_song:
-            player.now_playing = queue[0]
-
-        await player.skip()
 
     @_jump.error
     async def _jump_error(self, ctx, error):
@@ -313,15 +299,12 @@ class Music(commands.Cog):
             await ctx.send(embed=discord.Embed(description=f"I'm not in a voice channel, use the `play` command to get started.", color=c2))
             return
         
+        player.set_loop_song()
+
         if player.loop_song:
-            player.loop_song = False
             await ctx.send(embed=discord.Embed(description=f"Loop Song: **DISABLED**", color=c1))
         else:
-            player.loop_song = True
             await ctx.send(embed=discord.Embed(description=f"Loop Song: **ENABLED**", color=c1))
-
-        if player.loop_queue:
-            player.loop_queue = False
         
 
     @commands.command(name='LoopQueue', aliases=['lq'], description="Enable/disable loop queue")
@@ -334,15 +317,12 @@ class Music(commands.Cog):
             await ctx.send(embed=discord.Embed(description=f"I'm not in a voice channel, use the `play` command to get started.", color=c2))
             return
         
+        player.set_loop_queue()
+        
         if player.loop_queue:
-            player.loop_queue = False
             await ctx.send(embed=discord.Embed(description=f"Loop Queue: **DISABLED**", color=c1))
         else:
-            player.loop_queue = True
             await ctx.send(embed=discord.Embed(description=f"Loop Queue: **ENABLED**", color=c1))
-
-        if player.loop_song:
-            player.loop_song = False
         
 
     @commands.command(name='NowPlaying', aliases=['np'], description="Show the information about the song currently playing.")
@@ -373,10 +353,9 @@ class Music(commands.Cog):
         except:
             pass
         await ctx.send(embed=embed)
-
             
         
-    @commands.command(name='Lyrics', description="Shows lyrics of the currently playing song.")
+    @commands.command(name='Lyrics', description="Shows the lyrics of the song currently playing.")
     async def _lyrics(self,ctx):
         if not await self.command_availability_check(ctx):
             return
@@ -437,11 +416,10 @@ class Music(commands.Cog):
 
         await ctx.send(embed=embed)
 
+
     @commands.command(name='Ping', description="Shows the latency of the bot.")
     async def _ping(self,ctx):
         await ctx.send(embed=discord.Embed(description=f'__{int(self.client.latency*1000)}__ ms', color=c1))
-
-
 
 
 async def setup(client):

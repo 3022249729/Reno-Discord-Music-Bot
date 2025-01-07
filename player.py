@@ -38,7 +38,9 @@ class Player:
     def update_queue(self, queue):
         self.queue = queue
 
-    async def skip(self):
+    def skip(self):
+        if self.loop_song:
+            self.loop_song = False
         self.ctx.voice_client.stop()
         self.is_paused = False
 
@@ -66,7 +68,7 @@ class Player:
         embed=discord.Embed(description=f"**Now playing:** [{song.title}]({song.videolink})   [{song.duration}]", color=c1)
         if self.loop_song:
             embed.set_footer(text="Loop Song: ON")
-        if self.loop_queue:
+        elif self.loop_queue:
             embed.set_footer(text="Loop Queue: ON")
         await self.ctx.send(embed=embed)
 
@@ -99,10 +101,54 @@ class Player:
         if not self.now_playing:
             await self.play_next()
 
-    def get_queue(self):
-        queue = self.queue.copy()
-        if self.now_playing:
-            queue.insert(0, self.now_playing)
-        return queue
+    async def jump(self, index:int):
+        if not self.queue or index > len(self.queue) or index == 0 or index < -1:
+            raise ValueError("Invalid index.")
+
+        if index == -1:
+            target_song = self.queue.pop(-1)
+        else:
+            target_song = self.queue.pop(index - 1)
+
+        self.queue.insert(0, target_song)
+
+        if self.loop_song:
+            self.now_playing = self.queue[0]
+
+    def set_loop_song(self):
+        if self.loop_song:
+            self.loop_song = False
+        else:
+            self.loop_song = True
+
+        if self.loop_queue:
+            self.loop_queue = False
     
-            
+    def set_loop_queue(self):
+        if self.loop_queue:
+            self.loop_queue = False
+        else:
+            self.loop_queue = True
+
+        if self.loop_song:
+            self.loop_song = False
+
+    def remove(self, index:int):
+        if not self.queue or index > len(self.queue) or index == 0 or index < -1:
+            raise ValueError("Invalid index.")
+        
+        if index == -1:
+            removed_song = self.queue.pop(-1)
+        else:
+            removed_song = self.queue.pop(index - 1)
+        
+        return removed_song
+
+    def get_queue_page(self, page: int):
+        total_pages = (len(self.queue) + 10 - 1) // 10
+        if page <= 0 or page > total_pages:
+            raise ValueError("Invalid page.")
+        
+        start = (page - 1) * 10
+        end = min(start + 10, len(self.queue))
+        return self.queue[start:end], total_pages

@@ -103,7 +103,7 @@ class Music(commands.Cog):
         await loading_message.edit(embed=discord.Embed(description=f"**Queued:** [{song.title}]({song.videolink})   [{song.duration}]", color=c1))
 
 
-    @commands.command(name='Queue', aliases=['q'], description="Shows the list of queued songs.")
+    @commands.command(name='Queue', aliases=['q'], description="Show the list of queued songs.")
     async def _queue(self, ctx, page:int=1):
         if not await self.command_availability_check(ctx):
             return
@@ -355,7 +355,7 @@ class Music(commands.Cog):
         await ctx.send(embed=embed)
             
         
-    @commands.command(name='Lyrics', description="Shows the lyrics of the song currently playing.")
+    @commands.command(name='Lyrics', description="Show the lyrics of the song currently playing.")
     async def _lyrics(self,ctx):
         if not await self.command_availability_check(ctx):
             return
@@ -417,7 +417,7 @@ class Music(commands.Cog):
         await ctx.send(embed=embed)
 
 
-    @commands.command(name='Ping', description="Shows the latency of the bot.")
+    @commands.command(name='Ping', description="Show the latency of the bot.")
     async def _ping(self,ctx):
         await ctx.send(embed=discord.Embed(description=f'__{int(self.client.latency*1000)}__ ms', color=c1))
 

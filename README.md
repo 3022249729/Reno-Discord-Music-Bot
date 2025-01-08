@@ -92,6 +92,7 @@ Below is the list of all the commands for the bot:
 | .pause                |                     | Pause the music.                                                                                  |
 | .resume               |                     | Resume the music.                                                                                 |
 | .queue [page]         | `.q`                | Show the list of queued songs.                                                                    |
+| .shuffle              |                     | Shuffle the queue.                                                                                |
 | .remove &lt;index&gt; | `.rm` `.dl`         | Remove a song from the queue at the specified index. Use -1 to remove the last song in the queue. |
 | .jump &lt;index&gt;   | `.j`                | Jump to the song at the specified index. Use -1 to jump to the last song in the queue.            |
 | .nowplaying           | `.np`               | Show the information about the song currently playing.                                            |

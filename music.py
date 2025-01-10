@@ -65,6 +65,30 @@ class Music(commands.Cog):
         else:
             return None
         
+    def get_lyrics_text_genius(self, lyrics_divs):
+        lyrics = ""
+
+        for div in lyrics_divs:
+            if div is None:
+                continue
+            
+            div_str = str(div)
+            div_str = div_str.replace("<br/>", "\n").replace("<br>", "\n")
+
+            soup = BeautifulSoup(div_str, 'html.parser')
+
+            text = soup.get_text()
+            
+            if re.match(r'\[.*\]', text):
+                lyrics += '\n' + text
+            else:
+                if '<i>' in div_str or '<b>' in div_str:
+                    lyrics += text
+                else:
+                    lyrics += '\n' + text
+        
+        return lyrics
+
 
     @commands.command(name='Play', aliases=['pl', 'p'], description="Play audio from the provided URL/keyword.")
     async def _play(self,ctx, *, url:str=None):
@@ -396,34 +420,16 @@ class Music(commands.Cog):
         
         try:
             song_url = f"https://genius.com{song_data['path']}"
-            page = requests.get(song_url)
-            html = BeautifulSoup(page.text, 'html.parser')
-        except:
-            await ctx.send(embed=discord.Embed(description=f"An error occurred while fetching the lyrics, please try again.", color=c2))
+            with requests.Session() as session:
+                page = session.get(song_url)
+                html = BeautifulSoup(page.text, 'html.parser')
+        except Exception as e:
+            await ctx.send(embed=discord.Embed(description=f"An error occurred while fetching the lyrics, please try again.\nError: {e}", color=c2))
             return
         
         lyrics_divs = html.find_all('div', {'data-lyrics-container': 'true'})
 
-        lyrics = ""
-
-        for div in lyrics_divs:
-            if div is None:
-                continue
-            
-            div_str = str(div)
-            div_str = div_str.replace("<br/>", "\n").replace("<br>", "\n")
-
-            soup = BeautifulSoup(div_str, 'html.parser')
-
-            text = soup.get_text()
-            
-            if re.match(r'\[.*\]', text):
-                lyrics += '\n' + text
-            else:
-                if '<i>' in div_str or '<b>' in div_str:
-                    lyrics += text
-                else:
-                    lyrics += '\n' + text
+        lyrics = self.get_lyrics_text_genius(lyrics_divs)
 
         embed=discord.Embed(color=c1)
         try:

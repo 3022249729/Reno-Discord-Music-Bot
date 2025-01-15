@@ -144,8 +144,8 @@ class Music(commands.Cog):
         
         queue = player.queue
 
-        embed = discord.Embed(color=c1, title='**Now Playing:**')
-        embed.description = f'🎵   {player.now_playing.title}        [{player.now_playing.duration}]({player.now_playing.videolink})\n'
+        embed = discord.Embed(color=c1, title='**🎵 Now Playing:**')
+        embed.description = f'{player.now_playing.title}   [[{player.now_playing.duration}]({player.now_playing.videolink})]\n'
 
         embed.add_field(name='', value='', inline=False)
         embed.add_field(name='', value='', inline=False)
@@ -171,7 +171,7 @@ class Music(commands.Cog):
         queue_list = ""
 
         for i in range(len(songs)):
-            queue_list += f'\n{i+1})  {songs[i].title}        [{songs[i].duration}]({songs[i].videolink})'
+            queue_list += f'\n{i+1})  {songs[i].title}   [[{songs[i].duration}]({songs[i].videolink})]'
 
         embed.add_field(name='**Queue**:', value=queue_list, inline=False)
 

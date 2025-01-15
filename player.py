@@ -117,22 +117,20 @@ class Player:
             self.now_playing = self.queue[0]
 
     def set_loop_song(self):
-        if self.loop_song:
-            self.loop_song = False
-        else:
-            self.loop_song = True
-
+        self.loop_song = not self.loop_song
+        
         if self.loop_queue:
             self.loop_queue = False
+
+        return self.loop_song
     
     def set_loop_queue(self):
-        if self.loop_queue:
-            self.loop_queue = False
-        else:
-            self.loop_queue = True
+        self.loop_queue = not self.loop_queue
 
         if self.loop_song:
             self.loop_song = False
+
+        return self.loop_queue
 
     def remove(self, index:int):
         if not self.queue or index > len(self.queue) or index == 0 or index < -1:

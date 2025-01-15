@@ -156,7 +156,7 @@ class Music(commands.Cog):
             footer = ''
             if player.loop_song:
                 footer += 'Loop Song: ON'
-            if player.loop_queue:
+            elif player.loop_queue:
                 footer += 'Loop Queue: ON'
             embed.set_footer(text=footer)
             await ctx.send(embed=embed)
@@ -178,7 +178,7 @@ class Music(commands.Cog):
         footer = f'Page {page}/{total_pages}'
         if player.loop_song:
             footer += '  ●  Loop Song: ON'
-        if player.loop_queue:
+        elif player.loop_queue:
             footer += '  ●  Loop Queue: ON'
         embed.set_footer(text=footer)
 
@@ -342,12 +342,10 @@ class Music(commands.Cog):
             await ctx.send(embed=discord.Embed(description=f"I'm not in a voice channel, use the `play` command to get started.", color=c2))
             return
         
-        player.set_loop_song()
+        is_enabled = player.set_loop_song()
 
-        if player.loop_song:
-            await ctx.send(embed=discord.Embed(description=f"Loop Song: **DISABLED**", color=c1))
-        else:
-            await ctx.send(embed=discord.Embed(description=f"Loop Song: **ENABLED**", color=c1))
+        status = "ENABLED" if is_enabled else "DISABLED"
+        await ctx.send(embed=discord.Embed(description=f"Loop Song: **{status}**", color=c1))
         
 
     @commands.command(name='LoopQueue', aliases=['lq'], description="Enable/disable loop queue")
@@ -360,12 +358,10 @@ class Music(commands.Cog):
             await ctx.send(embed=discord.Embed(description=f"I'm not in a voice channel, use the `play` command to get started.", color=c2))
             return
         
-        player.set_loop_queue()
-        
-        if player.loop_queue:
-            await ctx.send(embed=discord.Embed(description=f"Loop Queue: **DISABLED**", color=c1))
-        else:
-            await ctx.send(embed=discord.Embed(description=f"Loop Queue: **ENABLED**", color=c1))
+        is_enabled = player.set_loop_queue()
+
+        status = "ENABLED" if is_enabled else "DISABLED"
+        await ctx.send(embed=discord.Embed(description=f"Loop Queue: **{status}**", color=c1))
         
 
     @commands.command(name='NowPlaying', aliases=['np'], description="Show the information about the song currently playing.")

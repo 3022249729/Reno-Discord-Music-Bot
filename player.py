@@ -74,7 +74,7 @@ class Player:
         await self.ctx.send(embed=embed)
 
         try:
-            source = discord.FFmpegPCMAudio(song.audio, **ffmpegopts)
+            source = discord.FFmpegOpusAudio(song.audio, **ffmpegopts)
             self.ctx.voice_client.play(source, after=lambda e: asyncio.run_coroutine_threadsafe(self.play_next(), self.ctx.bot.loop))
         except:
             await self.ctx.send(embed=discord.Embed(description=f"An error occured while playing, please try again...", color=c2))

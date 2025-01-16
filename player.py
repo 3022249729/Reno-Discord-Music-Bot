@@ -40,10 +40,10 @@ class Player:
         self.queue = queue
 
     def skip(self):
-        if self.loop_song:
-            self.loop_song = False
-        self.ctx.voice_client.stop()
+        self.loop_song = False
         self.is_paused = False
+        self.ctx.voice_client.stop()
+        
 
     async def disconnect(self):
         self.ctx.voice_client.stop()
@@ -102,7 +102,7 @@ class Player:
         if not self.now_playing:
             await self.play_next()
 
-    async def jump(self, index:int):
+    def jump(self, index:int):
         if not self.queue or index > len(self.queue) or index == 0 or index < -1:
             raise ValueError("Invalid index.")
 

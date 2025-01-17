@@ -41,8 +41,6 @@ class Song:
 
 
     def extract(self, content):
-        global songInfo
-
         url = self.get_url(content)
         
         with yt_dlp.YoutubeDL(ytdlopts) as ydl:

@@ -16,16 +16,17 @@ client.help_command = help.Help()
 
 @client.event
 async def on_ready():
-    await client.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name=f".help"))  
+    await client.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name=".help"))  
 
-    opus_path = ctypes.util.find_library('opus')
-    if not opus_path:
-        raise RuntimeError("Opus library not detected. Please install Opus as per the README instructions.")
-    
-    try:
-        discord.opus.load_opus(opus_path)
-    except:
-        raise RuntimeError("Failed to load Opus.")
+    if not discord.opus.is_loaded():
+        opus_path = ctypes.util.find_library('opus')
+        if not opus_path:
+            raise RuntimeError("Opus library not detected. Please install Opus as per the README instructions.")
+        
+        try:
+            discord.opus.load_opus(opus_path)
+        except Exception as e:
+            raise RuntimeError(f"Failed to load Opus: {e}")
     
 
 async def main():

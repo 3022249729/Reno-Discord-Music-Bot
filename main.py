@@ -4,9 +4,12 @@ import music
 import help
 import asyncio
 import ctypes
+from dotenv import load_dotenv
 from os import environ as env
 
-TOKEN = env.get("BOT_TOKEN")
+load_dotenv('.env')
+
+BOT_TOKEN = env.get("BOT_TOKEN")
 
 client = commands.Bot(command_prefix='.', case_insensitive=True, intents = discord.Intents.all())
 
@@ -35,4 +38,4 @@ async def main():
 
 
 asyncio.run(main())
-client.run(TOKEN)
+client.run(BOT_TOKEN)

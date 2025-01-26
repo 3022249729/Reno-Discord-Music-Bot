@@ -2,7 +2,7 @@ import discord
 import asyncio
 import random
 from os import environ as env
-import song as s
+from downloader import Downloader, Song
 
 DISCONNECT_TIMEOUT = int(env.get("AUTO_DISCONNECT_TIMEOUT"))
 
@@ -62,10 +62,14 @@ class Player:
             self.now_playing = self.queue.pop(0)
 
         if self.now_playing:
+            if not self.now_playing.audio:
+                downloader = Downloader()
+                downloader.extract_and_update(self.now_playing)
+
             await self.play(self.now_playing)
 
 
-    async def play(self, song: s.Song):
+    async def play(self, song:Song):
         embed=discord.Embed(description=f"**Now playing:** [{song.title}]({song.videolink})   [{song.duration}]", color=c1)
         if self.loop_song:
             embed.set_footer(text="Loop Song: ON")
@@ -97,8 +101,8 @@ class Player:
             await asyncio.sleep(2)
 
 
-    async def add_song_to_queue(self, song):
-        self.queue.append(song)
+    async def add_songs_to_queue(self, song):
+        self.queue.extend(song)
         if not self.now_playing:
             await self.play_next()
 
@@ -157,3 +161,4 @@ class Player:
             raise ValueError("Empty queue.")
         
         random.shuffle(self.queue)
+

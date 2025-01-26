@@ -4,8 +4,8 @@ import requests
 import re
 from bs4 import BeautifulSoup
 from os import environ as env
-import song as s
-import player as p
+from downloader import Downloader
+from player import Player
 
 GENIUS_ACCESS_TOKEN = env.get("GENIUS_ACCESS_TOKEN")
 
@@ -25,7 +25,7 @@ class Music(commands.Cog):
 
     def init_player(self, ctx):
         if ctx.guild.id not in self.players:
-            self.players[ctx.guild.id] = p.Player(ctx, self)
+            self.players[ctx.guild.id] = Player(ctx, self)
         return self.players[ctx.guild.id]
     
     def remove_player(self, guild_id):
@@ -132,13 +132,24 @@ class Music(commands.Cog):
         loading_message = await ctx.send(embed=discord.Embed(description=f"Loading entry...", color=c1))
 
         try:
-            song = s.Song(url)
+            downloader = Downloader()
+            songs = downloader.extract(url)
+
+            if not songs:
+                await loading_message.edit(embed=discord.Embed(description=f"Invalid keyword/link, please try again...", color=c2))
+                return
+            
+            await player.add_songs_to_queue(songs)
+
+            if len(songs) > 1:
+                await loading_message.edit(embed=discord.Embed(description=f"**Queued** `{len(songs)}` entries from playlist.", color=c1))
+            else:
+                await loading_message.edit(embed=discord.Embed(description=f"**Queued:** [{player.now_playing.title}]({player.now_playing.videolink})   [{player.now_playing.duration}]", color=c1))
+        
         except:
             await loading_message.edit(embed=discord.Embed(description=f"Invalid keyword/link, please try again...", color=c2))
             return
         
-        await player.add_song_to_queue(song)
-        await loading_message.edit(embed=discord.Embed(description=f"**Queued:** [{song.title}]({song.videolink})   [{song.duration}]", color=c1))
 
 
     @commands.command(name='Queue', aliases=['q'], description="Show the list of queued songs.")
@@ -156,6 +167,7 @@ class Music(commands.Cog):
         embed = discord.Embed(color=c1, title='**🎵 Now Playing:**')
         embed.description = f'{player.now_playing.title}   [[{player.now_playing.duration}]({player.now_playing.videolink})]\n'
 
+        embed.description += "\n### Queue:"
         embed.add_field(name='', value='', inline=False)
         embed.add_field(name='', value='', inline=False)
         #add gap between now playing and queue
@@ -180,9 +192,10 @@ class Music(commands.Cog):
         queue_list = ""
 
         for i in range(len(songs)):
-            queue_list += f'\n{i+1})  {songs[i].title}   [[{songs[i].duration}]({songs[i].videolink})]'
+            queue_list += f'\n{((page-1)*10)+i+1})  {songs[i].title}   [[{songs[i].duration}]({songs[i].videolink})]'
 
-        embed.add_field(name='**Queue**:', value=queue_list, inline=False)
+        embed.description += queue_list
+        # embed.add_field(name='**Queue**:', value=queue_list, inline=False)
 
         footer = f'Page {page}/{total_pages}'
         if player.loop_song:
@@ -190,7 +203,7 @@ class Music(commands.Cog):
         elif player.loop_queue:
             footer += '  ●  Loop Queue: ON'
         embed.set_footer(text=footer)
-
+        
         await ctx.send(embed=embed)
 
     @_queue.error
@@ -215,12 +228,8 @@ class Music(commands.Cog):
 
     @commands.command(name='Leave', aliases=['disconnect','dc'], description="Disconnect from the current voice channel.")
     async def _leave(self, ctx):
-        if not await self.command_availability_check(ctx):
-            return
-
-        player = self.players.get(ctx.guild.id)
+        player = await self.get_player_and_check(ctx)
         if not player:
-            await ctx.send(embed=discord.Embed(description=f"I'm not in a voice channel.", color=c2))
             return
         
         await player.disconnect()
@@ -232,8 +241,15 @@ class Music(commands.Cog):
         player = await self.get_player_and_check(ctx)
         if not player:
             return
+    
+        if not player.now_playing:
+            await ctx.send(embed=discord.Embed(description=f"I cannot pause when nothing is playing.", color=c2))
+            return
         
-        await player.pause()
+        if not player.is_paused:
+            player.pause()
+            
+        await ctx.send(embed=discord.Embed(description=f"⏸ Music paused...", color=c1))
        
 
     @commands.command(name='Resume', description="Resume the music.")
@@ -242,7 +258,14 @@ class Music(commands.Cog):
         if not player:
             return
         
-        await player.resume()
+        if not player.now_playing:
+            await ctx.send(embed=discord.Embed(description=f"I cannot resume when nothing is playing.", color=c2))
+            return
+        
+        if player.is_paused:
+            player.resume()
+
+        await ctx.send(embed=discord.Embed(description=f"▶️ Resuming music...", color=c1))
     
 
     @commands.command(name='Skip', aliases=['next', 's'], description="Skip the current song.")
@@ -250,7 +273,16 @@ class Music(commands.Cog):
         player = await self.get_player_and_check(ctx)
         if not player:
             return
-        await player.skip()
+        
+        if not player.now_playing:
+            await ctx.send(embed=discord.Embed(description=f"I cannot skip when nothing is playing.", color=c2))
+            return
+        
+        player.skip()
+        await ctx.send(embed=discord.Embed(description=f"**Skipped:** [{player.now_playing.title}]({player.now_playing.videolink})", color=c1))
+        
+        if player.is_paused:
+            player.resume()
 
        
     @commands.command(name='Remove', aliases=['rm', 'dl'], description="Remove a song from the queue at the specified index. Use -1 to remove the last song in the queue.")
@@ -293,7 +325,7 @@ class Music(commands.Cog):
             await ctx.send(embed=discord.Embed(description=f"Invalid index.", color=c2))
             return
         
-        await player.skip()
+        player.skip()
 
     @_jump.error
     async def _jump_error(self, ctx, error):

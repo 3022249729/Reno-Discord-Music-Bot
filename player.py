@@ -162,3 +162,6 @@ class Player:
         
         random.shuffle(self.queue)
 
+    def clear_queue(self):
+        self.queue = []
+

@@ -212,6 +212,16 @@ class Music(commands.Cog):
             await ctx.send(embed=discord.Embed(description="Invalid page number, please provide a positive integer.",color=c2))
               
 
+    @commands.command(name='Clear', description="Clear all the songs in the queue.")
+    async def _clear(self, ctx):
+        player = await self.get_player_and_check(ctx)
+        if not player:
+            return
+        
+        player.clear_queue()
+        await ctx.send(embed=discord.Embed(description="Queue cleared.",color=c2))
+
+
     @commands.command(name='Shuffle', description="Shuffle the queue.")
     async def _shuffle(self, ctx):
         player = await self.get_player_and_check(ctx)

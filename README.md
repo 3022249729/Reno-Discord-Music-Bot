@@ -29,7 +29,7 @@ pip install discord.py PyNaCl yt-dlp
   3. Rename the extracted folder to "ffmpeg".
   4. Open the Windows search bar, type in system variables, then hit enter.
   5. Click on the `Edit the system environment variables`.
-  6. Go to `User variables`, select `Path` and click the `Edi`" button.
+  6. Go to `User variables`, select `Path` and click the `Edit`" button.
   7. Click `New` on the side menu.
   8. Add the path to the extracted ffmpeg folder, then add \bin at the back of the path. For example:
 ```bash
@@ -55,7 +55,7 @@ sudo apt install ffmpeg
 ```
 
 ### Step 4: Install Opus
-  This step should be for non-Windows users only. If you're on Windows and are experiencing issue with Opus, follow the next steps.
+  This step should be for Mac users only. If you're on non-Mac systems and are experiencing issue with Opus, try the steps below.
   1. Download the latest stable release of Opus from the [official website](https://opus-codec.org/downloads/).
   2. Extract the downloaded file.
   3. Open cmd/Terminal.

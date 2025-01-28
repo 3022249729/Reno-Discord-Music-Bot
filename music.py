@@ -138,14 +138,13 @@ class Music(commands.Cog):
             if not songs:
                 await loading_message.edit(embed=discord.Embed(description=f"Invalid keyword/link, please try again...", color=c2))
                 return
-            
-            await player.add_songs_to_queue(songs)
 
             if len(songs) > 1:
                 await loading_message.edit(embed=discord.Embed(description=f"**Queued** `{len(songs)}` **entries from playlist.**", color=c1))
             else:
-                await loading_message.edit(embed=discord.Embed(description=f"**Queued:** [{songs[0].now_playing.title}]({songs[0].now_playing.videolink})   [{player.now_playing.duration}]", color=c1))
+                await loading_message.edit(embed=discord.Embed(description=f"**Queued:** [{songs[0].title}]({songs[0].videolink})   [{songs[0].duration}]", color=c1))
         
+            await player.add_songs_to_queue(songs)
         except:
             await loading_message.edit(embed=discord.Embed(description=f"Invalid keyword/link, please try again...", color=c2))
             return

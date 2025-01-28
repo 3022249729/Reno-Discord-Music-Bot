@@ -72,11 +72,12 @@ sudo make install
 ```
 
 ## Usage
-**IMPORTANT:** Host the bot first before inviting the bot to any servers!
 ### Launching the Bot
-  1. Open `.env` file and replace `YOUR_TOKEN` with your bot token.
-  2. Open cmd/Terminal.
-  3. Run the bot with the command:
+  1. Open the `.env` file.
+     - replace `BOT_TOKEN` with your discord bot token.
+     - replace `GENIUS_ACCESS_TOKEN` with your genius access token.
+  3. Open cmd/Terminal.
+  4. Run the bot with the command:
 ```bash
 python main.py
 ```
@@ -92,6 +93,7 @@ Below is the list of all the commands for the bot:
 | .pause                |                     | Pause the music.                                                                                  |
 | .resume               |                     | Resume the music.                                                                                 |
 | .queue [page]         | `.q`                | Show the list of queued songs.                                                                    |
+| .clear                |                     | Clear all the songs in the queue.                                                                 |
 | .shuffle              |                     | Shuffle the queue.                                                                                |
 | .remove &lt;index&gt; | `.rm` `.dl`         | Remove a song from the queue at the specified index. Use -1 to remove the last song in the queue. |
 | .jump &lt;index&gt;   | `.j`                | Jump to the song at the specified index. Use -1 to jump to the last song in the queue.            |

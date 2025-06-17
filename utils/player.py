@@ -79,8 +79,6 @@ class Player:
             embed.set_footer(text="Loop Queue: ON")
         await self.ctx.send(embed=embed)
 
-        print(song.audio)
-
         try:
             source = discord.FFmpegOpusAudio(song.audio, **ffmpegopts)
             self.ctx.voice_client.play(source, after=lambda e: asyncio.run_coroutine_threadsafe(self.play_next(), self.ctx.bot.loop))

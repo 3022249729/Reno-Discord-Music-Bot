@@ -2,7 +2,8 @@ import discord
 import asyncio
 import random
 from os import environ as env
-from downloader import Downloader, Song
+from utils.downloader import Downloader
+from utils.song import Song
 
 DISCONNECT_TIMEOUT = int(env.get("AUTO_DISCONNECT_TIMEOUT"))
 
@@ -64,7 +65,8 @@ class Player:
         if self.now_playing:
             if not self.now_playing.audio:
                 downloader = Downloader()
-                downloader.extract_and_update(self.now_playing)
+                async with self.ctx.typing():
+                    downloader.extract_audio(self.now_playing)
 
             await self.play(self.now_playing)
 
@@ -76,6 +78,8 @@ class Player:
         elif self.loop_queue:
             embed.set_footer(text="Loop Queue: ON")
         await self.ctx.send(embed=embed)
+
+        print(song.audio)
 
         try:
             source = discord.FFmpegOpusAudio(song.audio, **ffmpegopts)
@@ -90,7 +94,7 @@ class Player:
                 self.music_cog.remove_player(self.ctx.guild.id)
                 break
             if (not self.ctx.voice_client.is_paused() and not self.ctx.voice_client.is_playing()) or len(self.ctx.voice_client.channel.members) < 2:
-                idle_time += 2
+                idle_time += 3
                 if idle_time >= DISCONNECT_TIMEOUT:
                     await self.ctx.voice_client.disconnect()
                     await self.ctx.send(embed=discord.Embed(description=f"It looks like there's nothing I can play for you at the moment. I'm leaving the voice channel, call me back whenever you need!", color=c2))
@@ -98,7 +102,7 @@ class Player:
                     break
             else:
                 idle_time = 0
-            await asyncio.sleep(2)
+            await asyncio.sleep(3)
 
 
     async def add_songs_to_queue(self, song):

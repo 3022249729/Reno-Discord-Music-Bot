@@ -1,11 +1,9 @@
 import discord
 from discord.ext import commands
-import requests
-import re
-from bs4 import BeautifulSoup
 from os import environ as env
-from downloader import Downloader
-from player import Player
+from utils.downloader import Downloader
+from utils.player import Player
+from utils.lyrics import get_lyrics_genius
 
 GENIUS_ACCESS_TOKEN = env.get("GENIUS_ACCESS_TOKEN")
 
@@ -58,48 +56,6 @@ class Music(commands.Cog):
         
         player.update_ctx(ctx)
         return player
-    
-    def search_song_genius(self, song_title, access_token):
-        search_url = "https://api.genius.com/search"
-        headers = {
-            "Authorization": f"Bearer {access_token}"
-        }
-        params = {
-            "q": song_title
-        }
-        
-        response = requests.get(search_url, headers=headers, params=params)
-        json_data = response.json()
-        
-        if json_data['response']['hits']:
-            song_data = json_data['response']['hits'][0]['result']
-            return song_data
-        else:
-            return None
-        
-    def get_lyrics_text_genius(self, lyrics_divs):
-        lyrics = ""
-
-        for div in lyrics_divs:
-            if div is None:
-                continue
-            
-            div_str = str(div)
-            div_str = div_str.replace("<br/>", "\n").replace("<br>", "\n")
-
-            soup = BeautifulSoup(div_str, 'html.parser')
-
-            text = soup.get_text()
-            
-            if re.match(r'\[.*\]', text):
-                lyrics += '\n' + text
-            else:
-                if '<i>' in div_str or '<b>' in div_str:
-                    lyrics += text
-                else:
-                    lyrics += '\n' + text
-        
-        return lyrics
 
 
     @commands.command(name='Play', aliases=['pl', 'p'], description="Play audio from the provided URL/keyword.")
@@ -116,7 +72,6 @@ class Music(commands.Cog):
         elif ctx.voice_client.channel is not ctx.author.voice.channel:
             await ctx.send(embed=discord.Embed(description=f"I'm already in a voice channel.", color=c2))
             return
-    
         
         player = self.init_player(ctx)
         player.update_ctx(ctx)
@@ -129,29 +84,24 @@ class Music(commands.Cog):
                 await ctx.send(embed=discord.Embed(description=f"Please provide an URL or keyword.", color=c2))        
             return   
         
-        loading_message = await ctx.send(embed=discord.Embed(description=f"Loading entry...", color=c1))
-
-        try:
+        async with ctx.typing():
             downloader = Downloader()
-            songs = downloader.extract(url)
+            songs = downloader.extract_flat(url)
 
-            if not songs:
-                await loading_message.edit(embed=discord.Embed(description=f"Invalid keyword/link, please try again...", color=c2))
-                return
-
-            if len(songs) > 1:
-                await loading_message.edit(embed=discord.Embed(description=f"**Queued** `{len(songs)}` **entries from playlist.**", color=c1))
-            else:
-                await loading_message.edit(embed=discord.Embed(description=f"**Queued:** [{songs[0].title}]({songs[0].videolink})   [{songs[0].duration}]", color=c1))
-        
-            await player.add_songs_to_queue(songs)
-        except:
-            await loading_message.edit(embed=discord.Embed(description=f"Invalid keyword/link, please try again...", color=c2))
+        if not songs:
+            await ctx.send(embed=discord.Embed(description=f"Invalid keyword/link, please try again...", color=c2))
             return
-        
+
+        if len(songs) > 1:
+            await ctx.send(embed=discord.Embed(description=f"Queued `{len(songs)}` entries from playlist.", color=c1))
+        else:
+            await ctx.send(embed=discord.Embed(description=f"Queued: [{songs[0].title}]({songs[0].videolink})   [{songs[0].duration}]", color=c1))
+    
+        await player.add_songs_to_queue(songs)
 
 
-    @commands.command(name='Queue', aliases=['q'], description="Show the list of queued songs.")
+
+    @commands.command(name='Queue', aliases=['q'], description="Shows the list of queued songs.")
     async def _queue(self, ctx, page:int=1):
         player = await self.get_player_and_check(ctx)
         if not player:
@@ -191,10 +141,13 @@ class Music(commands.Cog):
         queue_list = ""
 
         for i in range(len(songs)):
-            queue_list += f'\n{((page-1)*10)+i+1})  {songs[i].title}   [[{songs[i].duration}]({songs[i].videolink})]'
+            title = songs[i].title
+            if len(title) > 100:
+                title = str(title[:100]) + "..."
+
+            queue_list += f'\n{((page-1)*10)+i+1})  {title}   [[{songs[i].duration}]({songs[i].videolink})]'
 
         embed.description += queue_list
-        # embed.add_field(name='**Queue**:', value=queue_list, inline=False)
 
         footer = f'Page {page}/{total_pages}'
         if player.loop_song:
@@ -402,24 +355,10 @@ class Music(commands.Cog):
             await ctx.send(embed=discord.Embed(description=f"Nothing is currently playing, please add a song using `play` before using this command.", color=c2))
             return
         
-        song_data = self.search_song_genius(player.now_playing.keyword, GENIUS_ACCESS_TOKEN)
-
-        if not song_data:
-            await ctx.send(embed=discord.Embed(description=f"No lyrics found.", color=c2))
+        song_data, lyrics = get_lyrics_genius(self.now_playing)
+        if not lyrics:
+            await ctx.send(embed=discord.Embed(description=f"Please join a voice channel to use this command.", color=c2))
             return
-        
-        try:
-            song_url = f"https://genius.com{song_data['path']}"
-            with requests.Session() as session:
-                page = session.get(song_url)
-                html = BeautifulSoup(page.text, 'html.parser')
-        except Exception as e:
-            await ctx.send(embed=discord.Embed(description=f"An error occurred while fetching the lyrics, please try again.\nError: {e}", color=c2))
-            return
-        
-        lyrics_divs = html.find_all('div', {'data-lyrics-container': 'true'})
-
-        lyrics = self.get_lyrics_text_genius(lyrics_divs)
 
         embed=discord.Embed(color=c1)
         try:
@@ -439,4 +378,3 @@ class Music(commands.Cog):
 
 async def setup(client):
     await client.add_cog(Music(client))
-

@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
-import music
-import help
+import cogs.music as music
+import cogs.help as help
 import asyncio
 import ctypes
 from dotenv import load_dotenv

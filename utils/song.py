@@ -23,6 +23,8 @@ class Song:
             self.audio = data.get('formats')[-1].get('url')
         elif data.get('_type') != "url":
             self.audio = data.get('url')
+            if "youtube.com" == data.get("webpage_url_domain"):
+                self.videolink = "https://www.youtube.com/watch?v=" + data.get('id')
         else:
             self.videolink = data.get('url')
             self.audio = None

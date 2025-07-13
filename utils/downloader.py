@@ -54,9 +54,14 @@ class Downloader:
 
             data = ydl.extract_info(contentUrl, download=False)
 
-            for entry in data['entries']:
-                song = Song(entry)
-                song.keyword = entry.get('title')
+            if 'entries' in data:
+                for entry in data['entries']:
+                    song = Song(entry)
+                    song.keyword = entry.get('title')
+                    songs.append(song)
+            else:
+                song = Song(data)
+                song.keyword = data.get('title')
                 songs.append(song)
 
             return songs
